@@ -20,12 +20,23 @@
         // 设置容器样式，避免继承页面样式
         buttonContainer.style.cssText = `
             position: fixed;
-            bottom: 20px;
-            right: 20px;
             z-index: 9999;
-            width: 50px;
-            height: 50px;
+            width: 32px;
+            height: 32px;
+            cursor: move;
         `;
+        
+        // 恢复保存的位置
+        const savedPosition = localStorage.getItem('spotifyButtonPosition');
+        if (savedPosition) {
+            const position = JSON.parse(savedPosition);
+            buttonContainer.style.left = position.x + 'px';
+            buttonContainer.style.top = position.y + 'px';
+        } else {
+            // 默认位置
+            buttonContainer.style.right = '20px';
+            buttonContainer.style.bottom = '20px';
+        }
         
         // 创建按钮元素
         const button = document.createElement('div');
@@ -49,7 +60,7 @@
         
         // 添加Spotify图标
         button.innerHTML = `
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="white">
                 <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/>
             </svg>
         `;
@@ -70,6 +81,53 @@
             convertToSpotify();
         });
         
+        // 添加拖动功能
+        let isDragging = false;
+        let offsetX, offsetY;
+        
+        buttonContainer.addEventListener('mousedown', (e) => {
+            // 只有在鼠标左键点击时才触发拖动
+            if (e.button !== 0) return;
+            
+            isDragging = true;
+            // 计算鼠标相对于按钮的偏移量
+            offsetX = e.clientX - buttonContainer.getBoundingClientRect().left;
+            offsetY = e.clientY - buttonContainer.getBoundingClientRect().top;
+            
+            // 防止拖动时选中文本
+            e.preventDefault();
+        });
+        
+        document.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            
+            // 计算按钮的新位置
+            const x = e.clientX - offsetX;
+            const y = e.clientY - offsetY;
+            
+            // 设置按钮位置
+            buttonContainer.style.left = x + 'px';
+            buttonContainer.style.top = y + 'px';
+            
+            // 清除默认位置
+            buttonContainer.style.right = 'auto';
+            buttonContainer.style.bottom = 'auto';
+        });
+        
+        document.addEventListener('mouseup', () => {
+            if (!isDragging) return;
+            
+            isDragging = false;
+            
+            // 保存按钮位置
+            const rect = buttonContainer.getBoundingClientRect();
+            const position = {
+                x: rect.left,
+                y: rect.top
+            };
+            localStorage.setItem('spotifyButtonPosition', JSON.stringify(position));
+        });
+        
         // 将按钮添加到容器
         buttonContainer.appendChild(button);
         
@@ -84,7 +142,10 @@
         
         // 网易云音乐标题格式通常是 "歌曲名 - 歌手 - 网易云音乐"
         // 移除最后的"网易云音乐"部分
-        const cleanTitle = title.replace(' - 网易云音乐', '');
+        let cleanTitle = title.replace(' - 网易云音乐', '');
+        
+        // 移除可能存在的"单曲"字样
+        cleanTitle = cleanTitle.replace('单曲', '').trim();
         
         if (cleanTitle.includes(' - ')) {
             const parts = cleanTitle.split(' - ');
@@ -110,14 +171,18 @@
             
             if (firstPartIsSong || lastPartIsArtist) {
                 // 格式可能是"歌曲名 - 歌手"
+                // 移除可能存在的"单曲"字样
+                const songTitle = parts[0].replace('单曲', '').trim();
                 return {
-                    title: parts[0],
+                    title: songTitle,
                     artist: parts.slice(1).join(' ')
                 };
             } else {
                 // 格式可能是"歌手 - 歌曲名"
+                // 移除可能存在的"单曲"字样
+                const songTitle = parts[parts.length - 1].replace('单曲', '').trim();
                 return {
-                    title: parts[parts.length - 1],
+                    title: songTitle,
                     artist: parts.slice(0, parts.length - 1).join(' ')
                 };
             }
