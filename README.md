@@ -22,7 +22,7 @@
    - 点击ScriptCat扩展图标
    - 点击上方小房子图标打开管理界面
    - 将`Netease2SP.js`文件直接拖入完成安装
-
+   - 点击安装脚本：[点我](https://update.greasyfork.org/scripts/544519/%E7%BD%91%E6%98%93%E4%BA%91%E9%9F%B3%E4%B9%90%E8%BD%ACSpotify.user.js)
 
 ## 功能特点
 
